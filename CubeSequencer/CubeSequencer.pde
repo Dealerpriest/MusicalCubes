@@ -27,7 +27,7 @@ ArrayList<MultiChannelBuffer> sampleBuffer;
 
 //---------------------------------------------------------------------
 
-byte       cubeToRecord              =   0;
+byte       cubeToRecord             =   0;
 int       averageBpm                =   0;
 int       recordingTime             =   0;
 int       sleepTime                 =   0;
@@ -37,7 +37,7 @@ int[]     cubes                     =   new int [8];
 int[]     distanceArray             =   new int [8];
 int[]     currentColorOf            =   new int [8];
 int[]     currentSemitoneOf         =   new int [8];
-float[]   currentSampleRateOf     =   new float [8];
+float[]   currentSampleRateOf       =   new float [8];
 int[]     distanceReferenceArray    =   new int [8];
 int[]     semitones                 =   { -5, -2, 0, 2, 5, 7};
 int       inByte                    =   0;
@@ -68,6 +68,7 @@ boolean   ready                     =   false;
 boolean   boxIsTapped               =   false;
 boolean   stopSequencer             =   false;
 boolean   sequencerIsStopped        =   false;
+boolean   isCopyingCubes            = false;
 boolean[] cubesState                =   new boolean[8];
 
 
@@ -83,12 +84,11 @@ void setup() {
         println("[" + i + "]" + Serial.list()[i]);
     }
 
-    myPort  = new Serial(this, Serial.list()[1], 9600);
+    myPort  = new Serial(this, Serial.list()[1], 19200);
     myPort.clear();
     myPort.bufferUntil('\n');
     minim   = new Minim(this);
-    worker  = new Worker(1);
-    worker.start();
+    worker  = new Worker();
  
 
     //16 bit 44100khz sample buffer 512 stereo;
@@ -144,7 +144,7 @@ void draw() {
 
     while ( recording ) {
         if (millis() - recordingTime >= 2000) {
-            worker.endRecordingVoice = true;
+            worker.endRecording();
         }
     }
 
@@ -161,6 +161,14 @@ void draw() {
         out.unmute();
         ////For debugging
         // startAllBeats();
+    }
+
+    if ( isCopyingCubes ) {
+        if( worker.checkTimers(0) ){ 
+            byte [] bytes = { hash, star, byte(worker.copyCubeNr1), byte(worker.copyCubeNr2) };
+            sendSerial(bytes);
+            isCopyingCubes = false;
+        }
     }
 }
 
@@ -189,7 +197,9 @@ void serialEvent( Serial myPort ) {
                 worker.copyCubeNr2 = myPort.read();
                 print("copyCubeNr1: " + worker.copyCubeNr1 + " copyCubeNr2: " + worker.copyCubeNr2);
                 println();
-                worker.startCopying = true;
+                worker.copyCubes(worker.copyCubeNr1, worker.copyCubeNr2);
+                isCopyingCubes = true;
+                worker.wait( 2000, 0 );
             }
 
             //recording cube
@@ -250,7 +260,7 @@ void waitForVolumeTreshold() {
             boxIsTapped = false;
             byte [] bytes = {hash, lBracket, cubeToRecord};
             sendSerial(bytes);
-            worker.recordVoice = true;
+            worker.startRecording();
         }
     } else {
         //send "recording timeout" to Arduino
@@ -329,7 +339,8 @@ void startStepSequencer() {
 
 
 void setPitchShift( int cubeNumber ) {
-    int   scalePosition = (int) map (distanceArray[cubeNumber], 0, 255, 0, semitones.length);
+    //int   scalePosition = (int) map (distanceArray[cubeNumber], 0, 255, 0, semitones.length);
+    int   scalePosition = distanceArray[cubeNumber];
     // println("seeting scaleposiition for " + cubeNumber + " to " + scalePosition);
     int   semitone   = semitones[scalePosition];
     if (semitone == currentSemitoneOf[cubeNumber]) { //If we needn't change the pitch then exit this function

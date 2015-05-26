@@ -1,63 +1,27 @@
-class Worker extends Thread {
+class Worker {
 
     private int wait;
     public int copyCubeNr1;
     public int copyCubeNr2;
     static final int NUMBEROFTIMERS = 6;
 
-    private boolean running;
-    public boolean recordVoice;
-    public boolean endRecordingVoice;
-    public boolean startCopying;
-
     private long [] waitTime    = new long[NUMBEROFTIMERS];
     private long [] currentTime = new long[NUMBEROFTIMERS];
 
 // ------------------------------------------------------------------------------------
 
-    Worker ( int _wait ) {
-        wait                = _wait;
-        recordVoice         = false;
-        endRecordingVoice   = false;
-        startCopying        = false;
+    Worker () {
         copyCubeNr1         = 0;
         copyCubeNr2         = 1;
-        wait( 1500, 0 );
+        wait( 2000, 0 );
     }
+
 
 // ------------------------------------------------------------------------------------
 
-    public void start () {
-        running = true;
-        println("Starting thread (will execute every " + wait + " milliseconds.)");
-        super.start();
-    }
-
-// ------------------------------------------------------------------------------------
-
-    public void run () {
-        while (running) {
-            sleep(wait);
-            checkBooleans();
-        }
-        System.out.println("Worker thread is done!");  // The thread is done when we get to the end of run()
-        quit();
-    }
-
-// ------------------------------------------------------------------------------------
-
-    //On quit()
-    public void quit() {
-        System.out.println("Quitting.");
-        running = false;  // Setting running to false ends the loop in run()
-        interrupt();
-    }
-
-// ------------------------------------------------------------------------------------
-
-    private void sleep( int sleepTime ) {
+    private void sleep( long  sleepTime ) {
         try {
-            sleep((long)(sleepTime));
+            sleep(sleepTime);
         } catch ( Exception e ) {
         }
 
@@ -84,11 +48,8 @@ class Worker extends Thread {
         saveBytes(cubeNumber2 + ".wav", b);
         refreshSampleBuffer(cubeNumber2);
 
-        sleep(2000);
 
-        byte [] bytes = { hash, star, byte(cubeNumber1), byte(cubeNumber2) };
-        sendSerial(bytes);
-        startCopying = false;
+
     }
 
 //---------------------------------------------------------------------
@@ -108,22 +69,6 @@ class Worker extends Thread {
         recorder.beginRecord();
         recording = true;
         recordingTime = millis();
-
-        recordVoice = false;
-    }
-
-//---------------------------------------------------------------------
-
-    void checkBooleans() {
-        if ( recordVoice ) {
-            startRecording();
-        }
-        if ( endRecordingVoice ) {
-            endRecording();
-        }
-        if ( startCopying ) {
-            copyCubes( copyCubeNr1, copyCubeNr2 );
-        }
     }
 
 //---------------------------------------------------------------------
@@ -140,7 +85,6 @@ class Worker extends Thread {
         startStepSequencer();
         myPort.clear();
         out.unmute();
-        endRecordingVoice = false;
 
     }
 
