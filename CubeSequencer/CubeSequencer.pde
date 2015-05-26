@@ -248,6 +248,8 @@ void waitForVolumeTreshold() {
         if (volumeMix >= volumeTreshold) {
             println("Treshold Reached:");
             boxIsTapped = false;
+            byte [] bytes = {hash, lBracket, cubeToRecord};
+            sendSerial(bytes);
             worker.recordVoice = true;
         }
     } else {
