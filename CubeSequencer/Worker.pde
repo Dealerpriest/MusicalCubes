@@ -1,14 +1,14 @@
 class Worker extends Thread {
 
     private int wait;
-    public int copyCubeNr1;
-    public int copyCubeNr2;
+    volatile public int copyCubeNr1;
+    volatile public int copyCubeNr2;
     static final int NUMBEROFTIMERS = 6;
 
     private boolean running;
-    public boolean recordVoice;
-    public boolean endRecordingVoice;
-    public boolean startCopying;
+    volatile public boolean recordVoice;
+    volatile public boolean endRecordingVoice;
+    volatile public boolean startCopying;
 
     private long [] waitTime    = new long[NUMBEROFTIMERS];
     private long [] currentTime = new long[NUMBEROFTIMERS];
