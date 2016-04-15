@@ -84,7 +84,7 @@ void setup() {
         println("[" + i + "]" + Serial.list()[i]);
     }
 
-    myPort  = new Serial(this, Serial.list()[1], 19200);
+    myPort  = new Serial(this, Serial.list()[0], 9600);
     myPort.clear();
     myPort.bufferUntil('\n');
     minim   = new Minim(this);
