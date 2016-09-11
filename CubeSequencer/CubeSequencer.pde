@@ -84,9 +84,9 @@ void setup() {
         println("[" + i + "]" + Serial.list()[i]);
     }
 
-    myPort  = new Serial(this, Serial.list()[0], 9600);
+    myPort  = new Serial(this, Serial.list()[1], 9600);
     myPort.clear();
-    myPort.bufferUntil('\n');
+    myPort.bufferUntil('\n'); //Eeeeh. Why??
     minim   = new Minim(this);
     worker  = new Worker();
  
@@ -208,7 +208,7 @@ void serialEvent( Serial myPort ) {
                 
                 cubeToRecord = (byte) myPort.read();
                 // lastTriggeredCube = (byte) cubeToRecord;
-                sleepTime = millis();
+                //sleepTime = millis();
                 //TODO: A delay so that the recording isn't triggerred by the sound of tapping the cube.
                 // delay(400);// while(millis() - sleepTime < 2000){};
                 sleepTime = millis();
@@ -254,8 +254,10 @@ void serialEvent( Serial myPort ) {
 //---------------------------------------------------------------------
 
 void waitForVolumeTreshold() {
-    if ((millis() - sleepTime) <= 5000) {
-        if (volumeMix >= volumeTreshold) {
+    if (millis() - sleepTime <= 5000) {
+        if (
+        millis() - sleepTime > 400 //Wait a bit before listening. So that the sound of tap itself doesn't trigger recording.
+        && volumeMix >= volumeTreshold) {
             println("Treshold Reached:");
             boxIsTapped = false;
             byte [] bytes = {hash, lBracket, cubeToRecord};
