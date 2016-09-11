@@ -274,7 +274,9 @@ void keyReleased(){
 
 void waitForVolumeTreshold() {
     if ((millis() - sleepTime) <= 5000) {
-        if (volumeMix >= volumeTreshold) {
+        if (
+        millis() - sleepTime > 400 //Wait a bit before listening. So that the sound od the tap itself doesn't trigger recording.
+        && volumeMix >= volumeTreshold) {
             println("Treshold Reached:");
             boxIsTapped = false;
             byte [] bytes = {hash, lBracket, cubeToRecord};
