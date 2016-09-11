@@ -86,7 +86,7 @@ void setup() {
 
     myPort  = new Serial(this, Serial.list()[0], 9600);
     myPort.clear();
-    myPort.bufferUntil('\n');
+    myPort.bufferUntil('\n');  //Calls serialevent only when this character has arrived.
     minim   = new Minim(this);
     worker  = new Worker();
  
@@ -120,8 +120,10 @@ void setup() {
     textFont(createFont( "Arial", 12 ));
 
     //send Arduino handshake
-    byte [] bytes = {'a'};
+    //byte [] bytes = {'a'};
+    byte [] bytes = {hash, 't', 'a'};
     sendSerial(bytes);
+    println("an 'a' handshake is sent to the opened serial port. Starting main loop.");
 }
 
 //---------------------------------------------------------------------
@@ -240,6 +242,12 @@ void serialEvent( Serial myPort ) {
                 byte [] bytes = {hash, bkSlash, byte(cube)};
                 sendSerial(bytes);
             }
+            
+            //text message
+            if(payloadByte == 't' ){
+              print("message received from Arduino: ");
+              println(myPort.readStringUntil('\n'));
+            }
 
             //TODO: MessageType PitchColor == ?+colorByte
             if ( payloadByte == gtThan ) {
@@ -247,6 +255,17 @@ void serialEvent( Serial myPort ) {
             }
         }
     }
+}
+
+void keyReleased(){
+  if(key == 'a'){
+    println("Recording Triggered");
+    // lastTriggeredCube = (byte) cubeToRecord;
+    sleepTime = millis();
+    out.mute();
+    stopStepSequencer();
+    boxIsTapped = true;
+  }
 }
 
 //---------------------------------------------------------------------

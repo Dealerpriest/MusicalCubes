@@ -57,11 +57,11 @@ class Worker {
 //---------------------------------------------------------------------
 
     public void startRecording() {
-        if ( cubesState[cubeToRecord] ) {
-            distanceReferenceArray[cubeToRecord] = distanceArray[cubeToRecord];
-        } else {
-            distanceReferenceArray[cubeToRecord] = DEFAULTDISTANCEREFERENCE;
-        }
+        // if ( cubesState[cubeToRecord] ) {
+        //     distanceReferenceArray[cubeToRecord] = distanceArray[cubeToRecord];
+        // } else {
+        //     distanceReferenceArray[cubeToRecord] = DEFAULTDISTANCEREFERENCE;
+        // }
 
         recorder = minim.createRecorder(in, cubes[cubeToRecord] + ".wav", true);
         recordingTime = millis();
