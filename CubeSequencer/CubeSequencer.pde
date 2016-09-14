@@ -55,6 +55,7 @@ byte      star                      =   42;
 byte      exPr                      =   33;
 byte      gtThan                    =   62;
 byte      questionMark              =   63;
+byte      dollar                    =   36;
 
 float     volumeTreshold            =   60;
 float     volumeMix                 =   0;
@@ -65,6 +66,7 @@ long      triggerEndTime            =   0;
 
 boolean   recording                 =   false;
 boolean   ready                     =   false;
+boolean   setupFinished             =   false;
 boolean   boxIsTapped               =   false;
 boolean   stopSequencer             =   false;
 boolean   sequencerIsStopped        =   false;
@@ -85,7 +87,7 @@ void setup() {
     }
 
     myPort  = new Serial(this, Serial.list()[0], 9600);
-    myPort.clear();
+//    myPort.clear();
     myPort.bufferUntil('\n');  //Calls serialevent only when this character has arrived.
     minim   = new Minim(this);
     worker  = new Worker();
@@ -115,20 +117,24 @@ void setup() {
 
     // start the sequencer
     out.setTempo( bpm );
-    out.playNote( 0, 0.25f, sequencer );
+//    out.playNote( 0, 0.25f, sequencer );
     out.mute();
     textFont(createFont( "Arial", 12 ));
-
-    //send Arduino handshake
-    //byte [] bytes = {'a'};
-    byte [] bytes = {hash, 't', 'a'};
-    sendSerial(bytes);
-    println("an 'a' handshake is sent to the opened serial port. Starting main loop.");
 }
 
 //---------------------------------------------------------------------
 
 void draw() {
+    if(!setupFinished){
+      setupFinished = true;
+    }
+  
+    if ( !ready ) {
+//      println("waiting for heartbeat");
+        return;
+        ////For debugging
+        // startAllBeats();
+    }
 
     background(0);
     stroke(255);
@@ -157,14 +163,6 @@ void draw() {
         waitForVolumeTreshold();
     }
 
-    if ( !ready ) {
-        println("Ready");
-        ready = true;
-        out.unmute();
-        ////For debugging
-        // startAllBeats();
-    }
-
     if ( isCopyingCubes ) {
         if( worker.checkTimers(0) ){ 
             byte [] bytes = { hash, star, byte(worker.copyCubeNr1), byte(worker.copyCubeNr2) };
@@ -187,74 +185,95 @@ void serialEvent( Serial myPort ) {
         ////For debug purpose
 //       print("Time: "+ millis() + " - ReceivedByte: " + inByte);
 //       println();
-        boolean isReadyForPayload = ready && inByte == hash;
-        if (isReadyForPayload) {
-            int payloadByte = myPort.read();
-
-            //copy cubes
-            if ( payloadByte == star ) {
-                println("Copying Triggered");
-                stopStepSequencer();
-                worker.copyCubeNr1 = myPort.read();
-                worker.copyCubeNr2 = myPort.read();
-                print("copyCubeNr1: " + worker.copyCubeNr1 + " copyCubeNr2: " + worker.copyCubeNr2);
-                println();
-                worker.copyCubes(worker.copyCubeNr1, worker.copyCubeNr2);
-                isCopyingCubes = true;
-                worker.wait( 2000, 0 );
-            }
-
-            //recording cube
-            if ( payloadByte == lBracket && !boxIsTapped ) {
-                println("Recording Triggered");
-                
-                cubeToRecord = (byte) myPort.read();
-                // lastTriggeredCube = (byte) cubeToRecord;
-                sleepTime = millis();
-                //TODO: A delay so that the recording isn't triggerred by the sound of tapping the cube.
-                // delay(400);// while(millis() - sleepTime < 2000){};
-                sleepTime = millis();
-                 out.mute();
-                stopStepSequencer();
-                boxIsTapped = true;
-            }
-
-            //trigger cube
-            if ( payloadByte == frSlash ) {
-                triggerStartTime = millis();
-                println("cube Triggered at:" + triggerStartTime);
-                int cube = myPort.read();
-                lastTriggeredCube = (byte)  cube;
-                int value = myPort.read();
-                startBeat(cube, value);
-
-                distanceArray[cube] = value;
-                setPitchShift( cube );
-            }
-
-            //trigger cube off
-            if ( payloadByte == bkSlash ) {
-                println("cube turned off at:" + millis());
-
-                int cube = myPort.read();
-                stopBeat(cube);
-                currentSemitoneOf[cube] = -1000;// This is to make sure color is sent when triggering after cube is turned of.                
-                byte [] bytes = {hash, bkSlash, byte(cube)};
-                sendSerial(bytes);
+        boolean isReadyForMessage = setupFinished && inByte == hash;
+        boolean isReadyForCommand = setupFinished && ready && inByte == hash;
+        
+        byte command; //set it to something we know we won't use
+        if(isReadyForMessage){
+            command = (byte) myPort.read();
+            //text message
+            if(command == 't' ){
+              String message = myPort.readStringUntil('\n');
+//              String message = "a";
+              if(message.equals("a\n")){
+                println("got handshake");
+                setReadyAndShakeBack();
+              }
+              print("message received from Arduino: " + message);
+              println();
             }
             
-            //text message
-            if(payloadByte == 't' ){
-              print("message received from Arduino: ");
-              println(myPort.readStringUntil('\n'));
+            if(isReadyForCommand){
+              //copy cubes
+              if ( command == star ) {
+                  println("Copying Triggered");
+                  stopStepSequencer();
+                  worker.copyCubeNr1 = myPort.read();
+                  worker.copyCubeNr2 = myPort.read();
+                  print("copyCubeNr1: " + worker.copyCubeNr1 + " copyCubeNr2: " + worker.copyCubeNr2);
+                  println();
+                  worker.copyCubes(worker.copyCubeNr1, worker.copyCubeNr2);
+                  isCopyingCubes = true;
+                  worker.wait( 2000, 0 );
+              }
+  
+              //recording cube
+              if ( command == lBracket && !boxIsTapped ) {
+                  println("Recording Triggered");
+                  
+                  cubeToRecord = (byte) myPort.read();
+                  // lastTriggeredCube = (byte) cubeToRecord;
+                  sleepTime = millis();
+                  //TODO: A delay so that the recording isn't triggerred by the sound of tapping the cube.
+                  // delay(400);// while(millis() - sleepTime < 2000){};
+                  sleepTime = millis();
+                   out.mute();
+                  stopStepSequencer();
+                  boxIsTapped = true;
+              }
+  
+              //trigger cube
+              if ( command == frSlash ) {
+                  triggerStartTime = millis();
+                  println("cube Triggered at:" + triggerStartTime);
+                  int cube = myPort.read();
+                  lastTriggeredCube = (byte)  cube;
+                  int value = myPort.read();
+                  startBeat(cube, value);
+  
+                  distanceArray[cube] = value;
+                  setPitchShift( cube );
+              }
+  
+              //trigger cube off
+              if ( command == bkSlash ) {
+                  println("cube turned off at:" + millis());
+  
+                  int cube = myPort.read();
+                  stopBeat(cube);
+                  currentSemitoneOf[cube] = -1000;// This is to make sure color is sent when triggering after cube is turned of.                
+                  byte [] bytes = {hash, bkSlash, byte(cube)};
+                  sendSerial(bytes);
+              }
+  
+              //TODO: MessageType PitchColor == ?+colorByte
+              if ( command == gtThan ) {
+                  startStepSequencer();
+              }
+              
             }
-
-            //TODO: MessageType PitchColor == ?+colorByte
-            if ( payloadByte == gtThan ) {
-                startStepSequencer();
-            }
+            
+            
         }
     }
+}
+
+void setReadyAndShakeBack(){
+        println("Ready");
+        byte [] bytes = {hash, 't', 'a'};
+        sendSerial(bytes);
+        ready = true;
+        out.unmute();
 }
 
 void keyReleased(){
@@ -412,6 +431,8 @@ void stop() {
 //---------------------------------------------------------------------
 
 void sendSerial( byte[] bytes ) {
+    String output = String(bytes);
+    println("sent the following to arduino: " + output);
     for (int i = 0; i < bytes.length; ++i) {
         myPort.write(bytes[i]);
     }

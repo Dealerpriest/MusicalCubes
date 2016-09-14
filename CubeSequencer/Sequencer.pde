@@ -14,6 +14,10 @@ class Sequencer implements Instrument {
             sendSerial(bytes);
             println("---------------------sent trigger for cube " + beat);
         }
+        else{
+            byte [] bytes = {hash, dollar, byte(cubes[beat])};
+            sendSerial(bytes);
+        }
     }
 
 //---------------------------------------------------------------------
