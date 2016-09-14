@@ -274,6 +274,7 @@ void setReadyAndShakeBack(){
         sendSerial(bytes);
         ready = true;
         out.unmute();
+        out.playNote( 0, 0.25f, sequencer );
 }
 
 void keyReleased(){
@@ -431,7 +432,7 @@ void stop() {
 //---------------------------------------------------------------------
 
 void sendSerial( byte[] bytes ) {
-    String output = String(bytes);
+    String output = new String(bytes);
     println("sent the following to arduino: " + output);
     for (int i = 0; i < bytes.length; ++i) {
         myPort.write(bytes[i]);
